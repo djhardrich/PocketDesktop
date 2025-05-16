@@ -3,7 +3,7 @@
 # Copyright (C) 2024-present ROCKNIX (https://github.com/ROCKNIX)
 
 PKG_NAME="es-theme-art-book-next"
-PKG_VERSION="0b42bca86b8a07be559aed16b97a0d3d603eddf5"
+PKG_VERSION="df11b7828db23fbc386d17964c6bcd8b994dfb40"
 PKG_LICENSE="CUSTOM"
 PKG_SITE="https://github.com/anthonycaccese/art-book-next-es"
 PKG_URL="${PKG_SITE}/archive/${PKG_VERSION}.tar.gz"
