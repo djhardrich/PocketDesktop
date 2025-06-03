@@ -22,14 +22,16 @@ if [ "${SUSPEND_MODE}" != "off" ]; then
   exit 0
 fi
 
+# If a game is not running, by default shutdown immediately
 SHUTDOWN_DELAY="$(get_setting system.shutdown_delay)"
 if [ "${SHUTDOWN_DELAY}" = "" ]; then
-    SHUTDOWN_DELAY=10
+    SHUTDOWN_DELAY=0
 fi
 
+# If a game is running, by default delay the shutdown for 5 minutes
 SHUTDOWN_DELAY_RUNNING_GAME="$(get_setting system.shutdown_delay_running_game)"
 if [ "${SHUTDOWN_DELAY_RUNNING_GAME}" = "" ]; then
-    SHUTDOWN_DELAY_RUNNING_GAME=60
+    SHUTDOWN_DELAY_RUNNING_GAME=900
 fi
 
 # flag file
@@ -51,17 +53,73 @@ check_es_running_game() {
   test "${HTTP_STATUS}" = 200 && return 0 # 200 when game running
 }
 
-do_es_shutdown() {
-  # Shutdown only when ES is up and no game is running
-  ${DEBUG} && log $0 "Shutting down"
+do_lid_close_actions() {
+  # Turn off display
+  if echo "${UI_SERVICE}" | grep "sway"; then
+    ${DEBUG} && log $0 "Display power off"
+    swaymsg "output * power off"
+  fi
 
-  curl "http://localhost:1234/shutdown"
+  # Mute audio
+  ${DEBUG} && log $0 "Mute audio"
+  wpctl set-mute @DEFAULT_AUDIO_SINK@ 1
+
+  # CPU core parking
+  ${DEBUG} && log $0 "CPU core parking"
+  for x in /sys/devices/system/cpu/cpu*/online; do
+    if [ ! $(echo "${x}" | grep "cpu0") ]; then
+      echo 0 > "${x}"
+    fi
+  done
+}
+
+do_lid_open_actions() {
+  # Turn on display
+  if echo "${UI_SERVICE}" | grep "sway"; then
+    ${DEBUG} && log $0 "Display power on"
+    swaymsg "output * power on"
+  fi
+
+  # Unmute audio
+  ${DEBUG} && log $0 "Unmute audio"
+  wpctl set-mute @DEFAULT_AUDIO_SINK@ 0
+
+  # Undo CPU core parking
+  ${DEBUG} && log $0 "Undo CPU core parking"
+  for x in /sys/devices/system/cpu/cpu*/online; do
+    if [ ! $(echo "${x}" | grep "cpu0") ]; then
+      echo 1 > "${x}"
+    fi
+  done
+}
+
+do_shutdown() {
+  # Unmute audio - otherwise wireplumber will keep it muted on next boot
+  ${DEBUG} && log $0 "Unmute audio"
+  wpctl set-mute @DEFAULT_AUDIO_SINK@ 0
+
+  # Check whether a game is running
+  check_es_running_game
+  RUNNING_GAME=$?
+
+  if [[ $RUNNING_GAME -eq 0 ]]; then
+    # ES shutdown API won't work if a game is running
+    ${DEBUG} && log $0 "Shutting down now"
+    shutdown now
+  else
+    # Use ES shutdown API so metadata is saved
+    ${DEBUG} && log $0 "Shutting down via ES API"
+    curl "http://localhost:1234/shutdown"
+  fi
 }
 
 if [ "${ACTION}" = "close" ]; then
   # Lid close event - create flag file
   ${DEBUG} && log $0 "Lid close - creating ${FLAG_FILE}"
   touch "${FLAG_FILE}"
+
+  # Actions on lid close
+  do_lid_close_actions
 
   # Wait for the desired shutdown delay
   check_es_running_game
@@ -75,21 +133,26 @@ if [ "${ACTION}" = "close" ]; then
     sleep ${SHUTDOWN_DELAY}
   fi
 
-  # Check whether the flag file is still present
+  # Delay has completed - check whether the flag file is still present
   if [ -f "${FLAG_FILE}" ]; then
     ${DEBUG} && log $0 "Delay expired, flag file found, shutting down"
-    # Use ES shutdown so metadata is saved
-    do_es_shutdown
+    # Do shutdown
+    do_shutdown
   else
     ${DEBUG} && log $0 "Delay expired, flag file not found"
-    exit 0
   fi
+
+  exit 0
 else
   # Lid open event - remove the flag file and kill processes
   ${DEBUG} && log $0 "Lid open - removing ${FLAG_FILE_PATTERN}.*"
   rm "${FLAG_FILE_PATTERN}".*
 
+  # Do lid open actions
+  do_lid_open_actions
+
   ${DEBUG} && log $0 "Lid open - killing ${TO_KILL} processes"
   killall ${TO_KILL}
+
   exit 0
 fi
