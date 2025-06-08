@@ -118,12 +118,12 @@ index a8f36c4f1..1c2637d21 100644
 +			p = positive direction, n = negative direction
 +			report value = (real_adc_data * tuning_value) / 100
 +		*/
-+		abs_x-p-tuning = <50>;
-+		abs_x-n-tuning = <50>;
++		abs_x-p-tuning = <60>;
++		abs_x-n-tuning = <60>;
 +		invert-absx;
 +
-+		abs_y-p-tuning = <50>;
-+		abs_y-n-tuning = <50>;
++		abs_y-p-tuning = <60>;
++		abs_y-n-tuning = <60>;
 +		invert-absy;
 +
 +		abs_rx-p-tuning = <50>;
