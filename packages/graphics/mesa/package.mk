@@ -5,7 +5,8 @@
 PKG_NAME="mesa"
 PKG_LICENSE="OSS"
 PKG_SITE="http://www.mesa3d.org/"
-PKG_DEPENDS_TARGET="toolchain expat libdrm zstd Mako:host pyyaml:host"
+PKG_DEPENDS_TARGET="toolchain expat libdrm zstd Mako:host pyyaml:host mesa:host"
+PKG_DEPENDS_HOST="toolchain:host llvm:host libclc:host spirv-tools:host libdrm:host spirv-llvm-translator:host wayland-protocols:host libX11:host libXext:host libXfixes:host libxshmfence:host libXxf86vm:host xrandr:host"
 PKG_LONGDESC="Mesa is a 3-D graphics library with an API."
 PKG_TOOLCHAIN="meson"
 PKG_PATCH_DIRS+=" ${DEVICE}"
@@ -21,6 +22,12 @@ esac
 PKG_URL="https://gitlab.freedesktop.org/mesa/mesa/-/archive/mesa-${PKG_VERSION}/mesa-mesa-${PKG_VERSION}.tar.gz"
 
 get_graphicdrivers
+
+pre_configure_host() {
+PKG_MESON_OPTS_HOST+=" ${MESA_LIBS_PATH_OPTS}  \
+                       -Dgallium-drivers=${GALLIUM_DRIVERS// /,} \
+                       -Dvulkan-drivers=${VULKAN_DRIVERS_MESA// /,} "
+}
 
 PKG_MESON_OPTS_TARGET=" ${MESA_LIBS_PATH_OPTS} \
                        -Dgallium-drivers=${GALLIUM_DRIVERS// /,} \
