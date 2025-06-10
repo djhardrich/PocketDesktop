@@ -24,4 +24,6 @@ if [ ! -f "${M8C_DIR}/config.ini" ]; then
     fi
 fi
 
+sway_fullscreen "m8c" &
+
 /usr/bin/m8c
