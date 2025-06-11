@@ -16,7 +16,7 @@ case ${DEVICE} in
     PKG_VERSION="24.3.4"
   ;;
   *)
-    PKG_VERSION="25.1.1"
+    PKG_VERSION="25.1.3"
   ;;
 esac
 PKG_URL="https://gitlab.freedesktop.org/mesa/mesa/-/archive/mesa-${PKG_VERSION}/mesa-mesa-${PKG_VERSION}.tar.gz"
