@@ -94,12 +94,12 @@ display_on() {
 
 mute_audio() {
   ${DEBUG} && log $0 "Mute audio"
-  wpctl set-mute @DEFAULT_AUDIO_SINK@ 1
+  pactl set-sink-mute @DEFAULT_SINK@ true
 }
 
 unmute_audio() {
   ${DEBUG} && log $0 "Unmute audio"
-  wpctl set-mute @DEFAULT_AUDIO_SINK@ 0
+  pactl set-sink-mute @DEFAULT_SINK@ false
 }
 
 park_cores() {
