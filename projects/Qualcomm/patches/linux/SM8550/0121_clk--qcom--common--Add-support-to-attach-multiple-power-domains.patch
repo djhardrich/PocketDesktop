@@ -1,0 +1,60 @@
+From 84e358fc80d0c8b9aa51d045e2cc0ac3a6769767 Mon Sep 17 00:00:00 2001
+From: Taniya Das <quic_tdas@quicinc.com>
+Date: Tue, 18 Feb 2025 19:56:47 +0530
+Subject: [PATCH] clk: qcom: common: Add support to attach multiple power
+ domains
+
+In the latest chipset clock controllers, multiple power domains
+can be required to access and configure the PLLs in probe. Therefore,
+add support for an API to attach to multiple power domains in the
+clock controller probe before configuring the PLLs.
+
+Signed-off-by: Taniya Das <quic_tdas@quicinc.com>
+Signed-off-by: Jagadeesh Kona <quic_jkona@quicinc.com>
+---
+ drivers/clk/qcom/common.c | 12 ++++++++++++
+ drivers/clk/qcom/common.h |  2 ++
+ 2 files changed, 14 insertions(+)
+
+diff --git a/drivers/clk/qcom/common.c b/drivers/clk/qcom/common.c
+index 9e3380fd7181..ec27f70b24bd 100644
+--- a/drivers/clk/qcom/common.c
++++ b/drivers/clk/qcom/common.c
+@@ -391,5 +391,17 @@ int qcom_cc_probe_by_index(struct platform_device *pdev, int index,
+ }
+ EXPORT_SYMBOL_GPL(qcom_cc_probe_by_index);
+ 
++int qcom_cc_attach_pds(struct device *dev, struct qcom_cc_desc *desc)
++{
++	int ret;
++
++	ret = devm_pm_domain_attach_list(dev, NULL, &desc->pd_list);
++	if (ret < 0 && ret != -EEXIST)
++		return ret;
++
++	return 0;
++}
++EXPORT_SYMBOL_GPL(qcom_cc_attach_pds);
++
+ MODULE_LICENSE("GPL v2");
+ MODULE_DESCRIPTION("QTI Common Clock module");
+diff --git a/drivers/clk/qcom/common.h b/drivers/clk/qcom/common.h
+index 7ace5d7f5836..45f1f53fb407 100644
+--- a/drivers/clk/qcom/common.h
++++ b/drivers/clk/qcom/common.h
+@@ -38,6 +38,7 @@ struct qcom_cc_desc {
+ 	const struct qcom_icc_hws_data *icc_hws;
+ 	size_t num_icc_hws;
+ 	unsigned int icc_first_node_id;
++	struct dev_pm_domain_list *pd_list;
+ };
+ 
+ /**
+@@ -76,5 +77,6 @@ extern int qcom_cc_probe(struct platform_device *pdev,
+ 			 const struct qcom_cc_desc *desc);
+ extern int qcom_cc_probe_by_index(struct platform_device *pdev, int index,
+ 				  const struct qcom_cc_desc *desc);
++extern int qcom_cc_attach_pds(struct device *dev, struct qcom_cc_desc *desc);
+ 
+ #endif
+ 
