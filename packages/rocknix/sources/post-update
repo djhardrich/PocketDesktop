@@ -229,3 +229,10 @@ rm -rf /storage/.config/duckstation
 
 # Wipe azahar config - fresh start after bringup dev
 rm -rf /storage/.config/azahar
+
+# set the default suspend shutdown delays if they doesn't already exist
+grep -q "^system\.shutdown_delay=" /storage/.config/system/configs/system.cfg ||
+  sed -i '$ a\system.shutdown_delay=0' /storage/.config/system/configs/system.cfg
+
+grep -q "^system\.shutdown_delay_running_game=" /storage/.config/system/configs/system.cfg ||
+  sed -i '$ a\system.shutdown_delay_running_game=900' /storage/.config/system/configs/system.cfg
