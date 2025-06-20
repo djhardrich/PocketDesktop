@@ -1,26 +1,11 @@
-From patchwork Sat Apr 19 14:51:30 2025
-Content-Type: text/plain; charset="utf-8"
-MIME-Version: 1.0
-Content-Transfer-Encoding: 7bit
-Subject: [v5,1/7] drm/msm/adreno: Add support for ACD
+From git@z Thu Jan  1 00:00:00 1970
+Subject: [PATCH v6 1/7] drm/msm/adreno: Add support for ACD
 From: Akhil P Oommen <quic_akhilpo@quicinc.com>
-X-Patchwork-Id: 649342
-Message-Id: <20250419-gpu-acd-v5-1-8dbab23569e0@quicinc.com>
-To: Rob Clark <robdclark@gmail.com>, Sean Paul <sean@poorly.run>, "Konrad
- Dybcio" <konradybcio@kernel.org>,
- Abhinav Kumar <quic_abhinavk@quicinc.com>,
- Marijn Suijten <marijn.suijten@somainline.org>, David Airlie
- <airlied@gmail.com>, Simona Vetter <simona@ffwll.ch>, Viresh Kumar
- <vireshk@kernel.org>, Nishanth Menon <nm@ti.com>, Stephen Boyd
- <sboyd@kernel.org>, Rob Herring <robh@kernel.org>, Krzysztof Kozlowski
- <krzk+dt@kernel.org>, Conor Dooley <conor+dt@kernel.org>, Akhil P Oommen
- <quic_akhilpo@quicinc.com>, Bjorn Andersson <andersson@kernel.org>, "Maya
- Matuszczyk" <maccraft123mc@gmail.com>,
- Anthony Ruhier <aruhier@mailbox.org>, Dmitry Baryshkov <lumag@kernel.org>
-Cc: <linux-arm-msm@vger.kernel.org>, <dri-devel@lists.freedesktop.org>,
- <freedreno@lists.freedesktop.org>, <linux-kernel@vger.kernel.org>,
- <linux-pm@vger.kernel.org>, <devicetree@vger.kernel.org>
-Date: Sat, 19 Apr 2025 20:21:30 +0530
+Date: Sat, 03 May 2025 12:33:32 +0530
+Message-Id: <20250503-gpu-acd-v6-1-ab1b52866c64@quicinc.com>
+MIME-Version: 1.0
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: 7bit
 
 ACD a.k.a Adaptive Clock Distribution is a feature which helps to reduce
 the power consumption. In some chipsets, it is also a requirement to
@@ -28,10 +13,10 @@ support higher GPU frequencies. This patch adds support for GPU ACD by
 sending necessary data to GMU and AOSS. The feature support for the
 chipset is detected based on devicetree data.
 
-Signed-off-by: Akhil P Oommen <quic_akhilpo@quicinc.com>
 Tested-by: Maya Matuszczyk <maccraft123mc@gmail.com>
 Tested-by: Anthony Ruhier <aruhier@mailbox.org>
 Reviewed-by: Konrad Dybcio <konrad.dybcio@oss.qualcomm.com>
+Signed-off-by: Akhil P Oommen <quic_akhilpo@quicinc.com>
 ---
  drivers/gpu/drm/msm/adreno/a6xx_gmu.c | 84 ++++++++++++++++++++++++++++++-----
  drivers/gpu/drm/msm/adreno/a6xx_gmu.h |  1 +
@@ -266,38 +251,26 @@ index 52ba4a07d7b9a709289acd244a751ace9bdaab5d..653ef720e2da4d2b0793c0b76e994b6f
  #define HFI_H2F_MSG_CORE_FW_START 14
  
  struct a6xx_hfi_msg_core_fw_start {
+-- 
+2.48.1
 
-From patchwork Sat Apr 19 14:51:31 2025
-Content-Type: text/plain; charset="utf-8"
-MIME-Version: 1.0
-Content-Transfer-Encoding: 7bit
-Subject: [v5,2/7] drm/msm/a6xx: Increase HFI response timeout
+From git@z Thu Jan  1 00:00:00 1970
+Subject: [PATCH v6 2/7] drm/msm/a6xx: Increase HFI response timeout
 From: Akhil P Oommen <quic_akhilpo@quicinc.com>
-X-Patchwork-Id: 649344
-Message-Id: <20250419-gpu-acd-v5-2-8dbab23569e0@quicinc.com>
-To: Rob Clark <robdclark@gmail.com>, Sean Paul <sean@poorly.run>, "Konrad
- Dybcio" <konradybcio@kernel.org>,
- Abhinav Kumar <quic_abhinavk@quicinc.com>,
- Marijn Suijten <marijn.suijten@somainline.org>, David Airlie
- <airlied@gmail.com>, Simona Vetter <simona@ffwll.ch>, Viresh Kumar
- <vireshk@kernel.org>, Nishanth Menon <nm@ti.com>, Stephen Boyd
- <sboyd@kernel.org>, Rob Herring <robh@kernel.org>, Krzysztof Kozlowski
- <krzk+dt@kernel.org>, Conor Dooley <conor+dt@kernel.org>, Akhil P Oommen
- <quic_akhilpo@quicinc.com>, Bjorn Andersson <andersson@kernel.org>, "Maya
- Matuszczyk" <maccraft123mc@gmail.com>,
- Anthony Ruhier <aruhier@mailbox.org>, Dmitry Baryshkov <lumag@kernel.org>
-Cc: <linux-arm-msm@vger.kernel.org>, <dri-devel@lists.freedesktop.org>,
- <freedreno@lists.freedesktop.org>, <linux-kernel@vger.kernel.org>,
- <linux-pm@vger.kernel.org>, <devicetree@vger.kernel.org>
-Date: Sat, 19 Apr 2025 20:21:31 +0530
+Date: Sat, 03 May 2025 12:33:33 +0530
+Message-Id: <20250503-gpu-acd-v6-2-ab1b52866c64@quicinc.com>
+MIME-Version: 1.0
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: 7bit
 
 When ACD feature is enabled, it triggers some internal calibrations
 which result in a pretty long delay during the first HFI perf vote.
 So, increase the HFI response timeout to match the downstream driver.
 
-Signed-off-by: Akhil P Oommen <quic_akhilpo@quicinc.com>
 Tested-by: Maya Matuszczyk <maccraft123mc@gmail.com>
 Tested-by: Anthony Ruhier <aruhier@mailbox.org>
+Signed-off-by: Akhil P Oommen <quic_akhilpo@quicinc.com>
+Reviewed-by: Konrad Dybcio <konrad.dybcio@oss.qualcomm.com>
 ---
  drivers/gpu/drm/msm/adreno/a6xx_hfi.c | 2 +-
  1 file changed, 1 insertion(+), 1 deletion(-)
@@ -315,31 +288,17 @@ index b256092596fbab86d4eb8c17ac7c89cf94827105..d0ddae1617c3213a1bb2cb5c18b8653c
  
  	if (ret) {
  		DRM_DEV_ERROR(gmu->dev,
+-- 
+2.48.1
 
-From patchwork Sat Apr 19 14:51:32 2025
-Content-Type: text/plain; charset="utf-8"
-MIME-Version: 1.0
-Content-Transfer-Encoding: 7bit
-Subject: [v5,3/7] drm/msm: a6x: Rework qmp_get() error handling
+From git@z Thu Jan  1 00:00:00 1970
+Subject: [PATCH v6 3/7] drm/msm: a6x: Rework qmp_get() error handling
 From: Akhil P Oommen <quic_akhilpo@quicinc.com>
-X-Patchwork-Id: 649346
-Message-Id: <20250419-gpu-acd-v5-3-8dbab23569e0@quicinc.com>
-To: Rob Clark <robdclark@gmail.com>, Sean Paul <sean@poorly.run>, "Konrad
- Dybcio" <konradybcio@kernel.org>,
- Abhinav Kumar <quic_abhinavk@quicinc.com>,
- Marijn Suijten <marijn.suijten@somainline.org>, David Airlie
- <airlied@gmail.com>, Simona Vetter <simona@ffwll.ch>, Viresh Kumar
- <vireshk@kernel.org>, Nishanth Menon <nm@ti.com>, Stephen Boyd
- <sboyd@kernel.org>, Rob Herring <robh@kernel.org>, Krzysztof Kozlowski
- <krzk+dt@kernel.org>, Conor Dooley <conor+dt@kernel.org>, Akhil P Oommen
- <quic_akhilpo@quicinc.com>, Bjorn Andersson <andersson@kernel.org>, "Maya
- Matuszczyk" <maccraft123mc@gmail.com>,
- Anthony Ruhier <aruhier@mailbox.org>, Dmitry Baryshkov <lumag@kernel.org>
-Cc: <linux-arm-msm@vger.kernel.org>, <dri-devel@lists.freedesktop.org>,
- <freedreno@lists.freedesktop.org>, <linux-kernel@vger.kernel.org>,
- <linux-pm@vger.kernel.org>, <devicetree@vger.kernel.org>, Konrad Dybcio
- <konrad.dybcio@oss.qualcomm.com>
-Date: Sat, 19 Apr 2025 20:21:32 +0530
+Date: Sat, 03 May 2025 12:33:34 +0530
+Message-Id: <20250503-gpu-acd-v6-3-ab1b52866c64@quicinc.com>
+MIME-Version: 1.0
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: 7bit
 
 Fix the following for qmp_get() errors:
 
@@ -347,10 +306,10 @@ Fix the following for qmp_get() errors:
 2. Ignore other errors because those are okay when GPU ACD is
 not required. They are checked again during gpu acd probe.
 
-Signed-off-by: Akhil P Oommen <quic_akhilpo@quicinc.com>
 Reviewed-by: Konrad Dybcio <konrad.dybcio@oss.qualcomm.com>
 Tested-by: Maya Matuszczyk <maccraft123mc@gmail.com>
 Tested-by: Anthony Ruhier <aruhier@mailbox.org>
+Signed-off-by: Akhil P Oommen <quic_akhilpo@quicinc.com>
 ---
  drivers/gpu/drm/msm/adreno/a6xx_gmu.c | 5 +++--
  1 file changed, 3 insertions(+), 2 deletions(-)
@@ -372,38 +331,25 @@ index 6bd6d7c67f98b38cb1d23f926b5e6ccbd7f2ec53..48b4ca8894ba38176481b62b7fd14064
  		goto detach_gxpd;
  	}
  
+-- 
+2.48.1
 
-From patchwork Sat Apr 19 14:51:33 2025
-Content-Type: text/plain; charset="utf-8"
-MIME-Version: 1.0
-Content-Transfer-Encoding: 7bit
-Subject: [v5,4/7] drm/msm/adreno: Add module param to disable ACD
+From git@z Thu Jan  1 00:00:00 1970
+Subject: [PATCH v6 4/7] drm/msm/adreno: Add module param to disable ACD
 From: Akhil P Oommen <quic_akhilpo@quicinc.com>
-X-Patchwork-Id: 649349
-Message-Id: <20250419-gpu-acd-v5-4-8dbab23569e0@quicinc.com>
-To: Rob Clark <robdclark@gmail.com>, Sean Paul <sean@poorly.run>, "Konrad
- Dybcio" <konradybcio@kernel.org>,
- Abhinav Kumar <quic_abhinavk@quicinc.com>,
- Marijn Suijten <marijn.suijten@somainline.org>, David Airlie
- <airlied@gmail.com>, Simona Vetter <simona@ffwll.ch>, Viresh Kumar
- <vireshk@kernel.org>, Nishanth Menon <nm@ti.com>, Stephen Boyd
- <sboyd@kernel.org>, Rob Herring <robh@kernel.org>, Krzysztof Kozlowski
- <krzk+dt@kernel.org>, Conor Dooley <conor+dt@kernel.org>, Akhil P Oommen
- <quic_akhilpo@quicinc.com>, Bjorn Andersson <andersson@kernel.org>, "Maya
- Matuszczyk" <maccraft123mc@gmail.com>,
- Anthony Ruhier <aruhier@mailbox.org>, Dmitry Baryshkov <lumag@kernel.org>
-Cc: <linux-arm-msm@vger.kernel.org>, <dri-devel@lists.freedesktop.org>,
- <freedreno@lists.freedesktop.org>, <linux-kernel@vger.kernel.org>,
- <linux-pm@vger.kernel.org>, <devicetree@vger.kernel.org>
-Date: Sat, 19 Apr 2025 20:21:33 +0530
+Date: Sat, 03 May 2025 12:33:35 +0530
+Message-Id: <20250503-gpu-acd-v6-4-ab1b52866c64@quicinc.com>
+MIME-Version: 1.0
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: 7bit
 
 Add a module param to disable ACD which will help to quickly rule it
 out for any GPU issues.
 
-Signed-off-by: Akhil P Oommen <quic_akhilpo@quicinc.com>
 Tested-by: Maya Matuszczyk <maccraft123mc@gmail.com>
 Tested-by: Anthony Ruhier <aruhier@mailbox.org>
 Reviewed-by: Konrad Dybcio <konrad.dybcio@oss.qualcomm.com>
+Signed-off-by: Akhil P Oommen <quic_akhilpo@quicinc.com>
 ---
  drivers/gpu/drm/msm/adreno/a6xx_gmu.c      | 7 +++++++
  drivers/gpu/drm/msm/adreno/adreno_device.c | 4 ++++
@@ -442,30 +388,18 @@ index 236b25c094cd5d462f4b6653de7b7910985cccb6..f5e1490d07c1868fa21cddb38de44c28
  extern const struct adreno_gpulist a2xx_gpulist;
  extern const struct adreno_gpulist a3xx_gpulist;
  extern const struct adreno_gpulist a4xx_gpulist;
+-- 
+2.48.1
 
-From patchwork Sat Apr 19 14:51:34 2025
-Content-Type: text/plain; charset="utf-8"
-MIME-Version: 1.0
-Content-Transfer-Encoding: 7bit
-Subject: [v5,5/7] dt-bindings: opp: Add v2-qcom-adreno vendor bindings
+From git@z Thu Jan  1 00:00:00 1970
+Subject: [PATCH v6 5/7] dt-bindings: opp: Add v2-qcom-adreno vendor
+ bindings
 From: Akhil P Oommen <quic_akhilpo@quicinc.com>
-X-Patchwork-Id: 649351
-Message-Id: <20250419-gpu-acd-v5-5-8dbab23569e0@quicinc.com>
-To: Rob Clark <robdclark@gmail.com>, Sean Paul <sean@poorly.run>, "Konrad
- Dybcio" <konradybcio@kernel.org>,
- Abhinav Kumar <quic_abhinavk@quicinc.com>,
- Marijn Suijten <marijn.suijten@somainline.org>, David Airlie
- <airlied@gmail.com>, Simona Vetter <simona@ffwll.ch>, Viresh Kumar
- <vireshk@kernel.org>, Nishanth Menon <nm@ti.com>, Stephen Boyd
- <sboyd@kernel.org>, Rob Herring <robh@kernel.org>, Krzysztof Kozlowski
- <krzk+dt@kernel.org>, Conor Dooley <conor+dt@kernel.org>, Akhil P Oommen
- <quic_akhilpo@quicinc.com>, Bjorn Andersson <andersson@kernel.org>, "Maya
- Matuszczyk" <maccraft123mc@gmail.com>,
- Anthony Ruhier <aruhier@mailbox.org>, Dmitry Baryshkov <lumag@kernel.org>
-Cc: <linux-arm-msm@vger.kernel.org>, <dri-devel@lists.freedesktop.org>,
- <freedreno@lists.freedesktop.org>, <linux-kernel@vger.kernel.org>,
- <linux-pm@vger.kernel.org>, <devicetree@vger.kernel.org>
-Date: Sat, 19 Apr 2025 20:21:34 +0530
+Date: Sat, 03 May 2025 12:33:36 +0530
+Message-Id: <20250503-gpu-acd-v6-5-ab1b52866c64@quicinc.com>
+MIME-Version: 1.0
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: 7bit
 
 Add a new schema which extends opp-v2 to support a new vendor specific
 property required for Adreno GPUs found in Qualcomm's SoCs. The new
@@ -475,10 +409,10 @@ for each opp needs to be shared to GMU during runtime.
 Also, update MAINTAINERS file include the new opp-v2-qcom-adreno.yaml.
 
 Cc: Rob Clark <robdclark@gmail.com>
-Signed-off-by: Akhil P Oommen <quic_akhilpo@quicinc.com>
 Tested-by: Maya Matuszczyk <maccraft123mc@gmail.com>
 Tested-by: Anthony Ruhier <aruhier@mailbox.org>
 Reviewed-by: Krzysztof Kozlowski <krzysztof.kozlowski@linaro.org>
+Signed-off-by: Akhil P Oommen <quic_akhilpo@quicinc.com>
 ---
  .../bindings/opp/opp-v2-qcom-adreno.yaml           | 96 ++++++++++++++++++++++
  MAINTAINERS                                        |  1 +
@@ -598,38 +532,24 @@ index c59316109e3f8feacf9628fd1065ed551c4250d5..2d055c8135d1e3dbbf29fe9a552ac0ee
  F:	drivers/gpu/drm/msm/adreno/
  F:	drivers/gpu/drm/msm/msm_gpu.*
  F:	drivers/gpu/drm/msm/msm_gpu_devfreq.*
+-- 
+2.48.1
 
-From patchwork Sat Apr 19 14:51:35 2025
-Content-Type: text/plain; charset="utf-8"
-MIME-Version: 1.0
-Content-Transfer-Encoding: 7bit
-Subject: [v5,6/7] arm64: dts: qcom: x1e80100: Add ACD levels for GPU
+From git@z Thu Jan  1 00:00:00 1970
+Subject: [PATCH v6 6/7] arm64: dts: qcom: x1e80100: Add ACD levels for GPU
 From: Akhil P Oommen <quic_akhilpo@quicinc.com>
-X-Patchwork-Id: 649352
-Message-Id: <20250419-gpu-acd-v5-6-8dbab23569e0@quicinc.com>
-To: Rob Clark <robdclark@gmail.com>, Sean Paul <sean@poorly.run>, "Konrad
- Dybcio" <konradybcio@kernel.org>,
- Abhinav Kumar <quic_abhinavk@quicinc.com>,
- Marijn Suijten <marijn.suijten@somainline.org>, David Airlie
- <airlied@gmail.com>, Simona Vetter <simona@ffwll.ch>, Viresh Kumar
- <vireshk@kernel.org>, Nishanth Menon <nm@ti.com>, Stephen Boyd
- <sboyd@kernel.org>, Rob Herring <robh@kernel.org>, Krzysztof Kozlowski
- <krzk+dt@kernel.org>, Conor Dooley <conor+dt@kernel.org>, Akhil P Oommen
- <quic_akhilpo@quicinc.com>, Bjorn Andersson <andersson@kernel.org>, "Maya
- Matuszczyk" <maccraft123mc@gmail.com>,
- Anthony Ruhier <aruhier@mailbox.org>, Dmitry Baryshkov <lumag@kernel.org>
-Cc: <linux-arm-msm@vger.kernel.org>, <dri-devel@lists.freedesktop.org>,
- <freedreno@lists.freedesktop.org>, <linux-kernel@vger.kernel.org>,
- <linux-pm@vger.kernel.org>, <devicetree@vger.kernel.org>, Konrad Dybcio
- <konrad.dybcio@oss.qualcomm.com>
-Date: Sat, 19 Apr 2025 20:21:35 +0530
+Date: Sat, 03 May 2025 12:33:37 +0530
+Message-Id: <20250503-gpu-acd-v6-6-ab1b52866c64@quicinc.com>
+MIME-Version: 1.0
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: 7bit
 
 Update GPU node to include acd level values.
 
-Signed-off-by: Akhil P Oommen <quic_akhilpo@quicinc.com>
 Reviewed-by: Konrad Dybcio <konrad.dybcio@oss.qualcomm.com>
 Tested-by: Maya Matuszczyk <maccraft123mc@gmail.com>
 Tested-by: Anthony Ruhier <aruhier@mailbox.org>
+Signed-off-by: Akhil P Oommen <quic_akhilpo@quicinc.com>
 ---
  arch/arm64/boot/dts/qcom/x1e80100.dtsi | 11 ++++++++++-
  1 file changed, 10 insertions(+), 1 deletion(-)
@@ -709,39 +629,26 @@ index 4936fa5b98ff7a9a009e3106f4dba90131251971..a9c8cca1c6356393962cef856b3dbd94
  				};
  			};
  		};
+-- 
+2.48.1
 
-From patchwork Sat Apr 19 14:51:36 2025
-Content-Type: text/plain; charset="utf-8"
-MIME-Version: 1.0
-Content-Transfer-Encoding: 7bit
-Subject: [v5,7/7] arm64: dts: qcom: x1e80100: Add OPPs up to Turbo L3 for GPU
+From git@z Thu Jan  1 00:00:00 1970
+Subject: [PATCH v6 7/7] arm64: dts: qcom: x1e80100: Add OPPs up to Turbo L3
+ for GPU
 From: Akhil P Oommen <quic_akhilpo@quicinc.com>
-X-Patchwork-Id: 649354
-Message-Id: <20250419-gpu-acd-v5-7-8dbab23569e0@quicinc.com>
-To: Rob Clark <robdclark@gmail.com>, Sean Paul <sean@poorly.run>, "Konrad
- Dybcio" <konradybcio@kernel.org>,
- Abhinav Kumar <quic_abhinavk@quicinc.com>,
- Marijn Suijten <marijn.suijten@somainline.org>, David Airlie
- <airlied@gmail.com>, Simona Vetter <simona@ffwll.ch>, Viresh Kumar
- <vireshk@kernel.org>, Nishanth Menon <nm@ti.com>, Stephen Boyd
- <sboyd@kernel.org>, Rob Herring <robh@kernel.org>, Krzysztof Kozlowski
- <krzk+dt@kernel.org>, Conor Dooley <conor+dt@kernel.org>, Akhil P Oommen
- <quic_akhilpo@quicinc.com>, Bjorn Andersson <andersson@kernel.org>, "Maya
- Matuszczyk" <maccraft123mc@gmail.com>,
- Anthony Ruhier <aruhier@mailbox.org>, Dmitry Baryshkov <lumag@kernel.org>
-Cc: <linux-arm-msm@vger.kernel.org>, <dri-devel@lists.freedesktop.org>,
- <freedreno@lists.freedesktop.org>, <linux-kernel@vger.kernel.org>,
- <linux-pm@vger.kernel.org>, <devicetree@vger.kernel.org>, Konrad Dybcio
- <konrad.dybcio@oss.qualcomm.com>
-Date: Sat, 19 Apr 2025 20:21:36 +0530
+Date: Sat, 03 May 2025 12:33:38 +0530
+Message-Id: <20250503-gpu-acd-v6-7-ab1b52866c64@quicinc.com>
+MIME-Version: 1.0
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: 7bit
 
 Now that we have ACD support for GPU, add additional OPPs up to
 Turbo L3 which are supported across all existing SKUs.
 
-Signed-off-by: Akhil P Oommen <quic_akhilpo@quicinc.com>
 Reviewed-by: Konrad Dybcio <konrad.dybcio@oss.qualcomm.com>
 Tested-by: Maya Matuszczyk <maccraft123mc@gmail.com>
 Tested-by: Anthony Ruhier <aruhier@mailbox.org>
+Signed-off-by: Akhil P Oommen <quic_akhilpo@quicinc.com>
 ---
  arch/arm64/boot/dts/qcom/x1e80100.dtsi | 16 +++++++++++++++-
  1 file changed, 15 insertions(+), 1 deletion(-)
@@ -776,3 +683,6 @@ index a9c8cca1c6356393962cef856b3dbd9420733999..8eddf0c9609871b8660587a22b008212
  					qcom,opp-acd-level = <0xa82a5ffd>;
  				};
  
+-- 
+2.48.1
+
