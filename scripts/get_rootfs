@@ -36,8 +36,8 @@ case $choice in
         echo "Downloading Ubuntu 24.04 ARM64 rootfs..."
         wget -O ${ROOTFS_DIR}/ubuntu-24.04-arm64-rootfs.tar.gz \
             "http://cdimage.ubuntu.com/ubuntu-base/releases/24.04/release/ubuntu-base-24.04.2-base-arm64.tar.gz"
-        echo "Downloaded to: ${ROOTFS_DIR}/ubuntu-24.04.2-arm64-rootfs.tar.gz"
-        echo "export EXTERNAL_ROOTFS=${PWD}/${ROOTFS_DIR}/ubuntu-24.04.2-arm64-rootfs.tar.gz"
+        echo "Downloaded to: ${ROOTFS_DIR}/ubuntu-24.04.3-arm64-rootfs.tar.gz"
+        echo "export EXTERNAL_ROOTFS=${PWD}/${ROOTFS_DIR}/ubuntu-24.04.3-arm64-rootfs.tar.gz"
         ;;
     3)
         echo "Downloading Debian 13 ARM64 rootfs..."
