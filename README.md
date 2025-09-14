@@ -1,63 +1,82 @@
-<img src="https://raw.githubusercontent.com/ROCKNIX/distribution/dev/distributions/ROCKNIX/logos/rocknix-logo.png" width=192>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[![Latest Version](https://img.shields.io/github/release/ROCKNIX/distribution.svg?color=FF5555&label=latest%20version&style=flat-square)](https://github.com/ROCKNIX/distribution/releases/latest) [![Activity](https://img.shields.io/github/commit-activity/m/ROCKNIX/distribution?color=FF5555&style=flat-square)](https://github.com/ROCKNIX/distribution/commits) [![Pull Requests](https://img.shields.io/github/issues-pr-closed/ROCKNIX/distribution?color=FF5555&style=flat-square)](https://github.com/ROCKNIX/distribution/pulls) [![Discord Server](https://img.shields.io/discord/948029830325235753?color=FF5555&label=chat&style=flat-square)](https://discord.gg/seTxckZjJy)
+<p align="center">
+  <img src="./assets/pocketdesktop-logo.svg" alt="PocketDesktop" width="420"/>
+</p>
 
----
+PocketDesktop — Desktop Linux Build Environment for Handheld Devices (fork of ROCKNIX)
+===================================================================================
 
-ROCKNIX is an immutable Linux distribution for handheld gaming devices developed by a small community of enthusiasts.  Our goal is to produce an operating system that has the features and capabilities that we need, and to have fun as we develop it.
+PocketDesktop is a minimal, fast desktop Linux build environment tailored for handheld gaming devices. It focuses on building the kernel and bootloader, then pairs them with an external ARM64 root filesystem (Ubuntu/Debian/Arch/Alpine).
 
-## Features
+[![Project](https://img.shields.io/badge/Project-PocketDesktop-FF5555?style=flat-square)](./)
+[![Upstream](https://img.shields.io/badge/Upstream-ROCKNIX-5555FF?style=flat-square)](https://github.com/ROCKNIX/distribution)
 
-* ROCKNIX has a very active community of developers and users.
-* Integrated cross-device local and remote network play.
-* In-game touch support on supported devices.
-* Fine grain control for battery life or performance.
-* Includes support for playing Music and Video.
-* Bluetooth audio and controller support.
-* Support for HDMI audio and video out, and USB audio.
-* Device to device and device to cloud sync with Syncthing and rclone.
-* VPN support with Wireguard, Tailscale, and ZeroTier.
-* Includes built-in support for scraping and retroachievements.
 
-## Screenshots
+Quick Start
+-----------
 
-<table>
-  <tr>
-    <td><img src="https://rocknix.org/_inc/images/screenshots/system-view.png"/></td>
-    <td><img src="https://rocknix.org/_inc/images/screenshots/menu.png"/></td>
-  </tr>
-  <tr>
-    <td><img src="https://rocknix.org/_inc/images/screenshots/gamelist-view-metadata-immersive.png"/></td>
-    <td><img src="https://rocknix.org/_inc/images/screenshots/gamelist-view-no-metadata-immersive.png"/></td>
-  </tr>
-</table>
+1) Download an ARM64 rootfs
 
-## Community
+```
+./scripts/get_rootfs
+```
 
-The ROCKNIX community utilizes Discord for discussion, if you would like to join us please use this link: [https://discord.gg/seTxckZjJy](https://discord.gg/seTxckZjJy)
+2) Configure your environment
 
-## Licenses
+```
+export PROJECT=Rockchip
+export DEVICE=RK3588
+export ARCH=aarch64
+export EXTERNAL_ROOTFS=/absolute/path/to/rootfs.tar.gz
+export ROOTFS_DISTRO_TYPE=ubuntu   # or: debian | arch | alpine
+```
 
-**ROCKNIX** is a fork of [JELOS](https://github.com/JustEnoughLinuxOS/distribution/), all licenses apply and credit to the JELOS team. 
+3) Validate the setup
 
-You are free to:
+```
+./scripts/test_external_rootfs
+```
 
-- Share: copy and redistribute the material in any medium or format
-- Adapt: remix, transform, and build upon the material
+4) Build (fast path: kernel + bootloader + image)
 
-Under the following terms:
+```
+make all
+```
 
-- Attribution: You must give appropriate credit, provide a link to the license, and indicate if changes were made. You may do so in any reasonable manner, but not in any way that suggests the licensor endorses you or your use.
-- NonCommercial: You may not use the material for commercial purposes.
-- ShareAlike: If you remix, transform, or build upon the material, you must distribute your contributions under the same license as the original.
 
-### ROCKNIX Software
+Docker (recommended)
+--------------------
 
-Copyright (C) 2024-present [ROCKNIX](https://github.com/ROCKNIX)
+```
+make docker-image-build
+make docker-all
+```
 
-Original software and scripts developed by the ROCKNIX are licensed under the terms of the [GNU GPL Version 2](https://choosealicense.com/licenses/gpl-2.0/).  The full license can be found in this project's licenses folder.
 
-### Bundled Works
-All other software is provided under each component's respective license.  These licenses can be found in the software sources or in this project's licenses folder.  Modifications to bundled software and scripts by the JELOS team are licensed under the terms of the software being modified.
+What this includes
+------------------
 
-## Credits
+- External rootfs workflow and config: `config/rootfs.conf`, `config/packages.conf`
+- Faster kernel-only rebuild loop (minutes instead of hours)
+- Image creation tuned for three-partition layout (boot, rootfs, storage)
+- Helper scripts:
+  - `scripts/get_rootfs` — fetch common ARM64 rootfs archives
+  - `scripts/install_packages` — optional package install inside the rootfs (per distro)
+  - `scripts/test_external_rootfs` — quick validation of prerequisites
 
-Like any Linux distribution, this project is not the work of one person.  It is the work of many persons all over the world who have developed the open source bits without which this project could not exist.  Special thanks to CoreELEC, LibreELEC, JELOS, and to developers and contributors across the open source community.
+
+Acknowledgements
+----------------
+
+PocketDesktop is possible thanks to the incredible work of the ROCKNIX community. This project stands on their shoulders and reuses large parts of their build system to enable a fast desktop-centric workflow for handheld devices. If you use PocketDesktop, please consider starring and supporting the upstream:
+
+- ROCKNIX repository: https://github.com/ROCKNIX/distribution
+
+Notes
+-----
+
+- Ensure `EXTERNAL_ROOTFS` points to a valid `*.tar.gz` rootfs archive.
+- When using Docker, privileged mode is enabled for image creation tasks.
+- For full upstream docs, features, and device support, see [ROCKNIX/distribution](https://github.com/ROCKNIX/distribution).
+
+- After writing the produced `.img.gz` to your SD card, manually expand the storage partition to use the full card capacity. You can do this with `gparted` or `parted` on a Linux host (resize the third partition, typically labeled storage).
+

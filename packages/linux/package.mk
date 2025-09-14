@@ -113,8 +113,32 @@ pre_make_target() {
 
   cp ${PKG_KERNEL_CFG_FILE} ${PKG_BUILD}/.config
 
-  # set initramfs source
-  ${PKG_BUILD}/scripts/config --set-str CONFIG_INITRAMFS_SOURCE "$(kernel_initramfs_confs) ${BUILD}/initramfs"
+  # set initramfs source (disable for external rootfs builds)
+  if [ -f "${ROOT}/config/rootfs.conf" ] && [ -n "${EXTERNAL_ROOTFS}" ]; then
+    echo "Configuring kernel for external rootfs boot (no initramfs)..."
+    ${PKG_BUILD}/scripts/config --set-str CONFIG_INITRAMFS_SOURCE ""
+    ${PKG_BUILD}/scripts/config --disable CONFIG_INITRAMFS_SOURCE
+
+    # Enable required filesystems for direct boot
+    ${PKG_BUILD}/scripts/config --enable CONFIG_EXT4_FS
+    ${PKG_BUILD}/scripts/config --enable CONFIG_EXT4_FS_POSIX_ACL
+    ${PKG_BUILD}/scripts/config --enable CONFIG_EXT4_FS_SECURITY
+
+    # Enable VFAT for boot partition
+    ${PKG_BUILD}/scripts/config --enable CONFIG_VFAT_FS
+    ${PKG_BUILD}/scripts/config --enable CONFIG_FAT_FS
+
+    # Enable common block devices
+    ${PKG_BUILD}/scripts/config --enable CONFIG_BLK_DEV_SD
+    ${PKG_BUILD}/scripts/config --enable CONFIG_BLK_DEV_SR
+
+    # Enable partition support
+    ${PKG_BUILD}/scripts/config --enable CONFIG_PARTITION_ADVANCED
+    ${PKG_BUILD}/scripts/config --enable CONFIG_MSDOS_PARTITION
+    ${PKG_BUILD}/scripts/config --enable CONFIG_EFI_PARTITION
+  else
+    ${PKG_BUILD}/scripts/config --set-str CONFIG_INITRAMFS_SOURCE "$(kernel_initramfs_confs) ${BUILD}/initramfs"
+  fi
 
   # set default hostname based on ${DISTRONAME}
   ${PKG_BUILD}/scripts/config --set-str CONFIG_DEFAULT_HOSTNAME "${DISTRONAME}"

@@ -14,14 +14,85 @@ IMG_TMP=$(mktemp -d -p ${TARGET_IMG})
 SAVE_ERROR="${IMG_TMP}/save_error"
 . projects/${PROJECT}/devices/${DEVICE}/options
 
+# Load rootfs configuration
+. ${ROOT}/config/rootfs.conf
+
+# Check for required privileges and set up command prefixes
+check_privileges() {
+  if [ "$(id -u)" = "0" ]; then
+    PARTED_CMD="parted"
+    MKE2FS_CMD="mke2fs"
+    TUNE2FS_CMD="tune2fs"
+    MOUNT_CMD="mount"
+    UMOUNT_CMD="umount"
+    E2FSCK_CMD="e2fsck"
+    MFORMAT_CMD="mformat"
+    FSCK_CMD="fsck.fat"
+    POPULATEFS_CMD="populatefs"
+    TAR_CMD="tar"
+    CP_CMD="cp"
+    MKDIR_CMD="mkdir"
+    DEPMOD_CMD="depmod"
+  else
+    if ! command -v sudo >/dev/null 2>&1; then
+      echo "mkimage: Error - This script requires root privileges or sudo to create disk images."
+      echo "mkimage: Please install sudo or run as root."
+      exit 1
+    fi
+    if ! sudo -n true 2>/dev/null; then
+      if [ ! -f /.dockerenv ]; then
+        echo "mkimage: This script requires root privileges to create disk images."
+        echo "mkimage: You may be prompted for your password by sudo."
+      fi
+    fi
+    PARTED_CMD="sudo parted"
+    MKE2FS_CMD="sudo mke2fs"
+    TUNE2FS_CMD="sudo tune2fs"
+    MOUNT_CMD="sudo mount"
+    UMOUNT_CMD="sudo umount"
+    E2FSCK_CMD="sudo e2fsck"
+    MFORMAT_CMD="sudo mformat"
+    FSCK_CMD="sudo fsck.fat"
+    POPULATEFS_CMD="sudo populatefs"
+    TAR_CMD="sudo tar"
+    CP_CMD="sudo cp"
+    MKDIR_CMD="sudo mkdir"
+    DEPMOD_CMD="sudo depmod"
+  fi
+
+  # wrapper functions to transparently use sudo if needed
+  parted() { eval ${PARTED_CMD} "$@"; }
+  mke2fs() { eval ${MKE2FS_CMD} "$@"; }
+  tune2fs() { eval ${TUNE2FS_CMD} "$@"; }
+  mount() { eval ${MOUNT_CMD} "$@"; }
+  umount() { eval ${UMOUNT_CMD} "$@"; }
+  e2fsck() { eval ${E2FSCK_CMD} "$@"; }
+  mformat() { eval ${MFORMAT_CMD} "$@"; }
+  fsck_fat() { eval ${FSCK_CMD} "$@"; }
+  populatefs() { eval ${POPULATEFS_CMD} "$@"; }
+  tar_cmd() { eval ${TAR_CMD} "$@"; }
+  cp_cmd() { eval ${CP_CMD} "$@"; }
+  mkdir_cmd() { eval ${MKDIR_CMD} "$@"; }
+  depmod_cmd() { eval ${DEPMOD_CMD} "$@"; }
+}
+
+# Check for privileges at startup
+check_privileges
+
+if [ ! -f "${EXTERNAL_ROOTFS}" ]; then
+  echo "mkimage: External rootfs not found: ${EXTERNAL_ROOTFS}"
+  exit 1
+fi
+
 if [ -z "${SYSTEM_SIZE}" -o -z "${SYSTEM_PART_START}" ]; then
   echo "mkimage: SYSTEM_SIZE and SYSTEM_PART_START must be configured!"
   exit 1
 fi
 
+BOOT_SIZE=${SYSTEM_SIZE}
 DISK_START_PADDING=$(((${SYSTEM_PART_START} + 2048 - 1) / 2048))
 DISK_GPT_PADDING=1
-DISK_SIZE=$((${DISK_START_PADDING} + ${SYSTEM_SIZE} + ${STORAGE_SIZE} + ${DISK_GPT_PADDING}))
+DISK_SIZE=$((${DISK_START_PADDING} + ${BOOT_SIZE} + ${ROOTFS_SIZE} + ${STORAGE_SIZE} + ${DISK_GPT_PADDING}))
 DISK_BASENAME="${TARGET_IMG}/${IMAGE_NAME}"
 if [ -n "${SUBDEVICE}" ]; then
   DISK_BASENAME="${DISK_BASENAME}-${SUBDEVICE}"
@@ -65,18 +136,22 @@ parted -s "${DISK}" mklabel ${DISK_LABEL}
 sync
 
 # create partitions
-echo "image: creating partitions..."
+echo "image: creating three partitions (boot, rootfs, storage)..."
 
-SYSTEM_PART_END=$((${SYSTEM_PART_START} + (${SYSTEM_SIZE} * 1024 * 1024 / 512) - 1))
-STORAGE_PART_START=$((${SYSTEM_PART_END} + 1))
+SYSTEM_PART_END=$((${SYSTEM_PART_START} + (${BOOT_SIZE} * 1024 * 1024 / 512) - 1))
+ROOTFS_PART_START=$((${SYSTEM_PART_END} + 1))
+ROOTFS_PART_END=$((${ROOTFS_PART_START} + (${ROOTFS_SIZE} * 1024 * 1024 / 512) - 1))
+STORAGE_PART_START=$((${ROOTFS_PART_END} + 1))
 STORAGE_PART_END=$((${STORAGE_PART_START} + (${STORAGE_SIZE} * 1024 * 1024 / 512) - 1))
 
 if [ "${DISK_LABEL}" = "gpt" ]; then
-  parted -s "${DISK}" -a min unit s mkpart system fat32 ${SYSTEM_PART_START} ${SYSTEM_PART_END}
+  parted -s "${DISK}" -a min unit s mkpart boot fat32 ${SYSTEM_PART_START} ${SYSTEM_PART_END}
+  parted -s "${DISK}" -a min unit s mkpart rootfs ext4 ${ROOTFS_PART_START} ${ROOTFS_PART_END}
   parted -s "${DISK}" -a min unit s mkpart storage ext4 ${STORAGE_PART_START} ${STORAGE_PART_END}
   parted -s "${DISK}" set 1 legacy_boot on
 else
   parted -s "${DISK}" -a min unit s mkpart primary fat32 ${SYSTEM_PART_START} ${SYSTEM_PART_END}
+  parted -s "${DISK}" -a min unit s mkpart primary ext4 ${ROOTFS_PART_START} ${ROOTFS_PART_END}
   parted -s "${DISK}" -a min unit s mkpart primary ext4 ${STORAGE_PART_START} ${STORAGE_PART_END}
   parted -s "${DISK}" set 1 boot on
 fi
@@ -88,30 +163,30 @@ if [ "${BOOTLOADER}" = "syslinux" ]; then
   dd bs=440 count=1 conv=fsync,notrunc if="${TOOLCHAIN}/share/syslinux/gptmbr.bin" of="${DISK}" >"${SAVE_ERROR}" 2>&1 || show_error
 fi
 
-# create part2 to format and copy files
-echo "image: creating sparse file for part2..."
+# create part3 to format and copy files (storage)
+echo "image: creating sparse file for part3 (storage)..."
 STORAGE_PART_COUNT=$((${STORAGE_PART_END} - ${STORAGE_PART_START} + 1))
 sync
-dd if="${DISK}" of="${IMG_TMP}/part2.ext4" bs=512 count=0 seek="${STORAGE_PART_COUNT}" conv=fsync >"${SAVE_ERROR}" 2>&1 || show_error
+dd if="${DISK}" of="${IMG_TMP}/part3.ext4" bs=512 count=0 seek="${STORAGE_PART_COUNT}" conv=fsync >"${SAVE_ERROR}" 2>&1 || show_error
 
-# create filesystem on part2
-echo "image: creating filesystem on part2..."
-mke2fs -F -q -t ext4 -O ^orphan_file -m 0 "${IMG_TMP}/part2.ext4"
-tune2fs -L "${DISTRO_DISKLABEL}" -U ${UUID_STORAGE} "${IMG_TMP}/part2.ext4" >"${SAVE_ERROR}" 2>&1 || show_error
-e2fsck -n "${IMG_TMP}/part2.ext4" >"${SAVE_ERROR}" 2>&1 || show_error
+# create filesystem on part3 (storage)
+echo "image: creating filesystem on part3 (storage)..."
+mke2fs -F -q -t ext4 -O ^orphan_file -m 0 "${IMG_TMP}/part3.ext4"
+tune2fs -L "${DISTRO_DISKLABEL}" -U ${UUID_STORAGE} "${IMG_TMP}/part3.ext4" >"${SAVE_ERROR}" 2>&1 || show_error
+e2fsck -n "${IMG_TMP}/part3.ext4" >"${SAVE_ERROR}" 2>&1 || show_error
 sync
 
 # add resize mark
-mkdir "${IMG_TMP}/part2.fs"
-touch "${IMG_TMP}/part2.fs/.please_resize_me"
-echo "image: populating filesystem on part2..."
-populatefs -U -d "${IMG_TMP}/part2.fs" "${IMG_TMP}/part2.ext4" >"${SAVE_ERROR}" 2>&1 || show_error
+mkdir "${IMG_TMP}/part3.fs"
+touch "${IMG_TMP}/part3.fs/.please_resize_me"
+echo "image: populating filesystem on part3..."
+populatefs -U -d "${IMG_TMP}/part3.fs" "${IMG_TMP}/part3.ext4" >"${SAVE_ERROR}" 2>&1 || show_error
 sync
-e2fsck -n "${IMG_TMP}/part2.ext4" >"${SAVE_ERROR}" 2>&1 || show_error
+e2fsck -n "${IMG_TMP}/part3.ext4" >"${SAVE_ERROR}" 2>&1 || show_error
 
-# merge part2 into disk image
-echo "image: merging part2 into disk image..."
-dd if="${IMG_TMP}/part2.ext4" of="${DISK}" bs=512 seek="${STORAGE_PART_START}" conv=fsync,notrunc >"${SAVE_ERROR}" 2>&1 || show_error
+# merge part3 into disk image
+echo "image: merging part3 into disk image..."
+dd if="${IMG_TMP}/part3.ext4" of="${DISK}" bs=512 seek="${STORAGE_PART_START}" conv=fsync,notrunc >"${SAVE_ERROR}" 2>&1 || show_error
 
 # create disk image for virtual appliance
 if [ "${PROJECT}" = "Generic" ]; then
@@ -120,8 +195,8 @@ if [ "${PROJECT}" = "Generic" ]; then
   dd if="${DISK}" of="${DISK_BASENAME}.tmp" bs=1M conv=fsync >"${SAVE_ERROR}" 2>&1 || show_error
 fi
 
-# create part1 to format and copy files
-echo "image: creating sparse file for part1..."
+# create part1 to format and copy files (boot)
+echo "image: creating sparse file for part1 (boot)..."
 SYSTEM_PART_COUNT=$((${SYSTEM_PART_END} - ${SYSTEM_PART_START} + 1))
 sync
 dd if=/dev/zero of="${IMG_TMP}/part1.fat" bs=512 count=0 seek="${SYSTEM_PART_COUNT}" conv=fsync >"${SAVE_ERROR}" 2>&1 || show_error
@@ -130,8 +205,8 @@ shopt -s expand_aliases # enables alias expansion in script
 alias mcopy='mcopy -i "${IMG_TMP}/part1.fat" -o'
 alias mmd='mmd -i "${IMG_TMP}/part1.fat"'
 
-# create filesystem on part1
-echo "image: creating filesystem on part1..."
+# create filesystem on part1 (boot)
+echo "image: creating filesystem on part1 (boot)..."
 
 if [ "${BOOTLOADER}" = "syslinux" -o "${BOOTLOADER}" = "bcm2835-bootloader" -o "${BOOTLOADER}" = "u-boot" -o "${BOOTLOADER}" = "arm-efi" ]; then
   mformat -i "${IMG_TMP}/part1.fat" -v "${DISTRO_BOOTLABEL}" -N "${UUID_SYSTEM//-/}" :: >"${SAVE_ERROR}" 2>&1 || show_error
@@ -193,7 +268,7 @@ EOF
   # copy files
   echo "image: copying files to part1..."
   mcopy "${TARGET_IMG}/${BUILD_NAME}.kernel" "::/${KERNEL_NAME}" >"${SAVE_ERROR}" 2>&1 || show_error
-  mcopy "${TARGET_IMG}/${BUILD_NAME}.system" ::/SYSTEM >"${SAVE_ERROR}" 2>&1 || show_error
+  # For external rootfs builds, there is no SYSTEM file
   mcopy "${RELEASE_DIR}/target/KERNEL.md5" "::/${KERNEL_NAME}.md5" >"${SAVE_ERROR}" 2>&1 || show_error
   mcopy "${RELEASE_DIR}/target/SYSTEM.md5" ::/SYSTEM.md5 >"${SAVE_ERROR}" 2>&1 || show_error
 
@@ -215,7 +290,6 @@ EOF
   # copy files
   echo "image: copying files to part1..."
   mcopy "${TARGET_IMG}/${BUILD_NAME}.kernel" "::/${KERNEL_NAME}" >"${SAVE_ERROR}" 2>&1 || show_error
-  mcopy "${TARGET_IMG}/${BUILD_NAME}.system" ::/SYSTEM >"${SAVE_ERROR}" 2>&1 || show_error
   mcopy "${RELEASE_DIR}/target/KERNEL.md5" "::/${KERNEL_NAME}.md5" >"${SAVE_ERROR}" 2>&1 || show_error
   mcopy "${RELEASE_DIR}/target/SYSTEM.md5" ::/SYSTEM.md5 >"${SAVE_ERROR}" 2>&1 || show_error
 
@@ -273,7 +347,6 @@ elif [ "${BOOTLOADER}" = "arm-efi" ]; then
   # copy files
   echo "image: copying files to part1..."
   mcopy "${TARGET_IMG}/${BUILD_NAME}.kernel" "::/${KERNEL_NAME}"
-  mcopy "${TARGET_IMG}/${BUILD_NAME}.system" ::/SYSTEM
   mcopy "${RELEASE_DIR}/target/KERNEL.md5" "::/${KERNEL_NAME}.md5"
   mcopy "${RELEASE_DIR}/target/SYSTEM.md5" ::/SYSTEM.md5
 

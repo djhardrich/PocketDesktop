@@ -20,6 +20,9 @@ setup_toolchain target
 show_config
 
 function do_mkimage() {
+  # Load rootfs configuration
+  . ${ROOT}/config/rootfs.conf
+
   # Variables used in mkimage script must be passed
   env \
     ROOT="${ROOT}" \
@@ -48,6 +51,9 @@ function do_mkimage() {
     STORAGE_SIZE="${STORAGE_SIZE:-32}" \
     OVA_SIZE="${OVA_SIZE}" \
     SUBDEVICE="${SUBDEVICE}" \
+    EXTERNAL_ROOTFS="${EXTERNAL_ROOTFS}" \
+    ROOTFS_SIZE="${ROOTFS_SIZE}" \
+    ROOTFS_LABEL="${ROOTFS_LABEL}" \
     ${SCRIPTS}/mkimage
 }
 
@@ -231,27 +237,60 @@ rm -rf ${TARGET_IMG}/${IMAGE_NAME}.kernel
 cp -PR $(get_install_dir linux)/.image/${KERNEL_TARGET} ${TARGET_IMG}/${IMAGE_NAME}.kernel
 chmod 0644 ${TARGET_IMG}/${IMAGE_NAME}.kernel
 
-# Set mksquashfs options for each compression method
-if [ -z "${SQUASHFS_COMPRESSION_OPTION}" ]; then
-  if [ "${SQUASHFS_COMPRESSION:-gzip}" = "gzip" ]; then
-    SQUASHFS_COMPRESSION_OPTION="-Xcompression-level 9 -b 262144"
-  elif [ "${SQUASHFS_COMPRESSION}" = "lzo" ]; then
-    SQUASHFS_COMPRESSION_OPTION="-Xcompression-level 9 -b 524288"
-  elif [ "${SQUASHFS_COMPRESSION}" = "zstd" ]; then
-    SQUASHFS_COMPRESSION_OPTION="-Xcompression-level 19 -b 1048576"
+# If external rootfs is configured, skip SYSTEM and copy modules/firmware/DTBs
+if [ -f "${ROOT}/config/rootfs.conf" ] && [ -n "${EXTERNAL_ROOTFS}" ]; then
+  mkdir -p ${TARGET_IMG}/lib/modules
+  echo "DEBUG: Looking for kernel modules..." >&2
+
+  if [ -d "${INSTALL}/usr/lib/kernel-overlays/base/lib/modules" ]; then
+    echo "DEBUG: Found modules in kernel overlay directory: ${INSTALL}/usr/lib/kernel-overlays/base/lib/modules" >&2
+    cp -r ${INSTALL}/usr/lib/kernel-overlays/base/lib/modules/* ${TARGET_IMG}/lib/modules/
+    echo "DEBUG: Modules copied from overlay. Contents:" >&2
+    ls -la ${TARGET_IMG}/lib/modules/ >&2
+  elif [ -d "${BUILD}/linux-$(kernel_version)/modules/lib/modules" ]; then
+    echo "DEBUG: Found modules in build directory: ${BUILD}/linux-$(kernel_version)/modules/lib/modules" >&2
+    cp -r ${BUILD}/linux-$(kernel_version)/modules/lib/modules/* ${TARGET_IMG}/lib/modules/
+    echo "DEBUG: Modules copied from build. Contents:" >&2
+    ls -la ${TARGET_IMG}/lib/modules/ >&2
+  else
+    echo "WARNING: No kernel modules found in expected locations!" >&2
+    echo "DEBUG: Searching for .ko files:" >&2
+    find ${BUILD}/linux-$(kernel_version) -name "*.ko" -type f | head -5 >&2
+    find ${INSTALL} -name "*.ko" -type f | head -5 >&2
   fi
+
+  mkdir -p ${TARGET_IMG}/lib/firmware
+  if [ -d "${INSTALL}/usr/lib/kernel-overlays/base/lib/firmware" ]; then
+    cp -r ${INSTALL}/usr/lib/kernel-overlays/base/lib/firmware/* ${TARGET_IMG}/lib/firmware/ 2>/dev/null || true
+  fi
+
+  if [ -d "${BUILD}/linux-$(kernel_version)/arch/${TARGET_KERNEL_ARCH}/boot/dts" ]; then
+    mkdir -p ${TARGET_IMG}/dtbs
+    find ${BUILD}/linux-$(kernel_version)/arch/${TARGET_KERNEL_ARCH}/boot/dts -name "*.dtb" -exec cp {} ${TARGET_IMG}/dtbs/ \;
+  fi
+else
+  # Set mksquashfs options for each compression method
+  if [ -z "${SQUASHFS_COMPRESSION_OPTION}" ]; then
+    if [ "${SQUASHFS_COMPRESSION:-gzip}" = "gzip" ]; then
+      SQUASHFS_COMPRESSION_OPTION="-Xcompression-level 9 -b 262144"
+    elif [ "${SQUASHFS_COMPRESSION}" = "lzo" ]; then
+      SQUASHFS_COMPRESSION_OPTION="-Xcompression-level 9 -b 524288"
+    elif [ "${SQUASHFS_COMPRESSION}" = "zstd" ]; then
+      SQUASHFS_COMPRESSION_OPTION="-Xcompression-level 19 -b 1048576"
+    fi
+  fi
+
+  # Create squashfs file, default to gzip if no compression configured
+  echo "rm -rf \"${TARGET_IMG}/${IMAGE_NAME}.system\"" >>${FAKEROOT_SCRIPT}
+  echo "${TOOLCHAIN}/bin/mksquashfs \"${BUILD}/image/system\" \"${TARGET_IMG}/${IMAGE_NAME}.system\" -noappend -comp ${SQUASHFS_COMPRESSION:-gzip} ${SQUASHFS_COMPRESSION_OPTION}" >>${FAKEROOT_SCRIPT}
+
+  # Run fakeroot
+  ${TOOLCHAIN}/bin/fakeroot -- ${FAKEROOT_SCRIPT}
+  rm -rf ${FAKEROOT_SCRIPT}
+
+  # Set permissions
+  chmod 0644 ${TARGET_IMG}/${IMAGE_NAME}.system
 fi
-
-# Create squashfs file, default to gzip if no compression configured
-echo "rm -rf \"${TARGET_IMG}/${IMAGE_NAME}.system\"" >>${FAKEROOT_SCRIPT}
-echo "${TOOLCHAIN}/bin/mksquashfs \"${BUILD}/image/system\" \"${TARGET_IMG}/${IMAGE_NAME}.system\" -noappend -comp ${SQUASHFS_COMPRESSION:-gzip} ${SQUASHFS_COMPRESSION_OPTION}" >>${FAKEROOT_SCRIPT}
-
-# Run fakeroot
-${TOOLCHAIN}/bin/fakeroot -- ${FAKEROOT_SCRIPT}
-rm -rf ${FAKEROOT_SCRIPT}
-
-# Set permissions
-chmod 0644 ${TARGET_IMG}/${IMAGE_NAME}.system
 
 if [ "${1}" = "release" -o "${1}" = "mkimage" -o "${1}" = "noobs" ]; then
 
@@ -291,13 +330,11 @@ if [ "${1}" = "release" -o "${1}" = "mkimage" -o "${1}" = "noobs" ]; then
   cp ${ROOT}/licenses/* ${RELEASE_DIR}/licenses
 
   mkdir -p ${RELEASE_DIR}/target
-  cp ${TARGET_IMG}/${IMAGE_NAME}.system ${RELEASE_DIR}/target/SYSTEM
   cp ${TARGET_IMG}/${IMAGE_NAME}.kernel ${RELEASE_DIR}/target/KERNEL
 
   # Create md5sum's
   (
     cd ${RELEASE_DIR}
-    md5sum -t target/SYSTEM >target/SYSTEM.md5
     md5sum -t target/KERNEL >target/KERNEL.md5
   )
 

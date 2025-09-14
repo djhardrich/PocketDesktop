@@ -1,0 +1,87 @@
+#!/bin/bash
+
+# SPDX-License-Identifier: GPL-2.0-or-later
+# Helper script to download ARM64 rootfs files
+
+set -e
+
+ROOTFS_DIR="${ROOTFS_DIR:-rootfs}"
+mkdir -p ${ROOTFS_DIR}
+
+echo "ROCKNIX External Rootfs Downloader"
+echo "=================================="
+echo ""
+echo "This script helps download ARM64 rootfs files for use with ROCKNIX"
+echo ""
+echo "Select a distribution:"
+echo "1) Ubuntu 22.04 (Jammy)"
+echo "2) Ubuntu 24.04 (Noble)"
+echo "3) Debian 13 (Trixie)"
+echo "4) Debian 12 (Bookworm)"
+echo "5) Arch Linux ARM"
+echo "6) Alpine Linux"
+echo ""
+
+read -p "Enter your choice (1-6): " choice
+
+case $choice in
+    1)
+        echo "Downloading Ubuntu 22.04 ARM64 rootfs..."
+        wget -O ${ROOTFS_DIR}/ubuntu-22.04-arm64-rootfs.tar.gz \
+            "http://cdimage.ubuntu.com/ubuntu-base/releases/22.04/release/ubuntu-base-22.04.4-base-arm64.tar.gz"
+        echo "Downloaded to: ${ROOTFS_DIR}/ubuntu-22.04-arm64-rootfs.tar.gz"
+        echo "export EXTERNAL_ROOTFS=${PWD}/${ROOTFS_DIR}/ubuntu-22.04-arm64-rootfs.tar.gz"
+        ;;
+    2)
+        echo "Downloading Ubuntu 24.04 ARM64 rootfs..."
+        wget -O ${ROOTFS_DIR}/ubuntu-24.04-arm64-rootfs.tar.gz \
+            "http://cdimage.ubuntu.com/ubuntu-base/releases/24.04/release/ubuntu-base-24.04.2-base-arm64.tar.gz"
+        echo "Downloaded to: ${ROOTFS_DIR}/ubuntu-24.04.2-arm64-rootfs.tar.gz"
+        echo "export EXTERNAL_ROOTFS=${PWD}/${ROOTFS_DIR}/ubuntu-24.04.2-arm64-rootfs.tar.gz"
+        ;;
+    3)
+        echo "Downloading Debian 13 ARM64 rootfs..."
+        wget -O ${ROOTFS_DIR}/debian-13-arm64-rootfs.tar.xz \
+            "https://github.com/debuerreotype/docker-debian-artifacts/raw/refs/heads/dist-arm64v8/trixie/oci/blobs/rootfs.tar.gz"
+        xz -d ${ROOTFS_DIR}/debian-13-arm64-rootfs.tar.xz || true
+        gzip -f ${ROOTFS_DIR}/debian-13-arm64-rootfs.tar
+        echo "Downloaded to: ${ROOTFS_DIR}/debian-13-arm64-rootfs.tar.gz"
+        echo "export EXTERNAL_ROOTFS=${PWD}/${ROOTFS_DIR}/debian-13-arm64-rootfs.tar.gz"
+        ;;
+    4)
+        echo "Downloading Debian 12 ARM64 rootfs..."
+        wget -O ${ROOTFS_DIR}/debian-12-arm64-rootfs.tar.xz \
+            "https://github.com/debuerreotype/docker-debian-artifacts/raw/dist-arm64v8/bookworm/rootfs.tar.xz"
+        xz -d ${ROOTFS_DIR}/debian-12-arm64-rootfs.tar.xz || true
+        gzip -f ${ROOTFS_DIR}/debian-12-arm64-rootfs.tar
+        echo "Downloaded to: ${ROOTFS_DIR}/debian-12-arm64-rootfs.tar.gz"
+        echo "export EXTERNAL_ROOTFS=${PWD}/${ROOTFS_DIR}/debian-12-arm64-rootfs.tar.gz"
+        ;;
+    5)
+        echo "Downloading Arch Linux ARM rootfs..."
+        wget -O ${ROOTFS_DIR}/archlinux-arm64-rootfs.tar.gz \
+            "http://os.archlinuxarm.org/os/ArchLinuxARM-aarch64-latest.tar.gz"
+        echo "Downloaded to: ${ROOTFS_DIR}/archlinux-arm64-rootfs.tar.gz"
+        echo "export EXTERNAL_ROOTFS=${PWD}/${ROOTFS_DIR}/archlinux-arm64-rootfs.tar.gz"
+        ;;
+    6)
+        echo "Downloading Alpine Linux ARM64 rootfs..."
+        wget -O ${ROOTFS_DIR}/alpine-arm64-rootfs.tar.gz \
+            "https://dl-cdn.alpinelinux.org/alpine/v3.19/releases/aarch64/alpine-minirootfs-3.19.0-aarch64.tar.gz"
+        echo "Downloaded to: ${ROOTFS_DIR}/alpine-arm64-rootfs.tar.gz"
+        echo "export EXTERNAL_ROOTFS=${PWD}/${ROOTFS_DIR}/alpine-arm64-rootfs.tar.gz"
+        ;;
+    *)
+        echo "Invalid choice!"
+        exit 1
+        ;;
+esac
+
+echo ""
+echo "Rootfs downloaded successfully!"
+echo "To use it, set the EXTERNAL_ROOTFS environment variable as shown above."
+echo ""
+echo "You may also want to set:"
+echo "export ROOTFS_SIZE=4096  # Size in MB for the rootfs partition"
+
+

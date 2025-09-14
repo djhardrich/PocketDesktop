@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="480" height="80" viewBox="0 0 480 80" role="img" aria-label="PocketDesktop">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#FF6A6A"/>
+      <stop offset="100%" stop-color="#FF3B7A"/>
+    </linearGradient>
+  </defs>
+  <rect rx="12" ry="12" x="0" y="0" width="480" height="80" fill="#111318"/>
+  <g transform="translate(18,14)">
+    <rect x="0" y="0" width="96" height="52" rx="12" ry="12" fill="url(#g)"/>
+    <circle cx="22" cy="26" r="6" fill="#0F1116"/>
+    <circle cx="41" cy="26" r="6" fill="#0F1116"/>
+    <rect x="64" y="18" width="20" height="6" rx="3" fill="#0F1116"/>
+    <rect x="64" y="30" width="20" height="6" rx="3" fill="#0F1116"/>
+  </g>
+  <text x="130" y="36" font-family="Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Helvetica Neue, Arial" font-size="22" font-weight="700" fill="#FFFFFF">PocketDesktop</text>
+  <text x="130" y="58" font-family="Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Helvetica Neue, Arial" font-size="12" fill="#BFC7D5">Desktop Linux build env for handheld devices</text>
+</svg>
+

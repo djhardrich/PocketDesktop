@@ -1,0 +1,83 @@
+#!/bin/bash
+
+# SPDX-License-Identifier: GPL-2.0-or-later
+# Test script for external rootfs build system
+
+set -e
+
+echo "ROCKNIX External Rootfs Build System Test"
+echo "========================================="
+echo ""
+
+# Check if rootfs config exists
+if [ ! -f "config/rootfs.conf" ]; then
+    echo "ERROR: config/rootfs.conf not found!"
+    exit 1
+fi
+
+# Load rootfs config
+. config/rootfs.conf
+
+echo "Configuration:"
+echo "  EXTERNAL_ROOTFS: ${EXTERNAL_ROOTFS}"
+echo "  ROOTFS_SIZE: ${ROOTFS_SIZE}"
+echo "  ROOTFS_LABEL: ${ROOTFS_LABEL}"
+echo ""
+
+# Check if external rootfs exists
+if [ ! -f "${EXTERNAL_ROOTFS}" ]; then
+    echo "ERROR: External rootfs not found: ${EXTERNAL_ROOTFS}"
+    echo ""
+    echo "Please download a rootfs using:"
+    echo "  ./scripts/get_rootfs"
+    echo ""
+    echo "Or set EXTERNAL_ROOTFS to point to an existing rootfs tar.gz file"
+    exit 1
+fi
+
+# Check if PROJECT and DEVICE are set
+if [ -z "${PROJECT}" ] || [ -z "${DEVICE}" ]; then
+    echo "ERROR: PROJECT and DEVICE must be set"
+    echo ""
+    echo "Example:"
+    echo "  export PROJECT=Rockchip"
+    echo "  export DEVICE=RK3588"
+    echo "  export ARCH=aarch64"
+    exit 1
+fi
+
+echo "Build environment:"
+echo "  PROJECT: ${PROJECT}"
+echo "  DEVICE: ${DEVICE}"
+echo "  ARCH: ${ARCH}"
+echo ""
+
+echo "Checking required tools..."
+for tool in tar gzip pigz mke2fs parted mcopy depmod populatefs; do
+    if ! command -v ${tool} >/dev/null 2>&1; then
+        echo "  ERROR: ${tool} not found"
+        exit 1
+    else
+        echo "  ✓ ${tool}"
+    fi
+done
+echo ""
+
+echo "Testing rootfs extraction..."
+if tar -tzf "${EXTERNAL_ROOTFS}" >/dev/null 2>&1; then
+    echo "  ✓ Rootfs tar.gz is valid"
+else
+    echo "  ERROR: Cannot read rootfs tar.gz"
+    exit 1
+fi
+
+echo ""
+echo "✓ All tests passed! External rootfs build system is ready."
+echo ""
+echo "To build:"
+echo "  make all"
+echo ""
+echo "Or with Docker:"
+echo "  make docker-all"
+
+

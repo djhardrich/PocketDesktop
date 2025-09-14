@@ -23,6 +23,16 @@ RUN apt-get install -y \
     python3 parted unzip wget curl xfonts-utils xsltproc zip xxd zstd rdfind automake \
     xmlstarlet rsync
 
+# Build populatefs from source for external rootfs support
+RUN cd /tmp && \
+    git clone https://github.com/linux-test-project/ltp.git && \
+    cd ltp && \
+    make autotools && \
+    ./configure && \
+    make -C testcases/kernel/fs/ext4-new-features/populatefs && \
+    sudo cp testcases/kernel/fs/ext4-new-features/populatefs/populatefs /usr/local/bin/ && \
+    cd / && rm -rf /tmp/ltp
+
 ### Cross compiling on ARM
 RUN if [ "$(uname -m)" = "aarch64" ]; then apt-get install -y --no-install-recommends qemu-user-binfmt libc6-dev-amd64-cross; fi
 RUN if [ ! -d /lib64 ]; then ln -sf /usr/x86_64-rocknix-linux-gnu/lib64 /lib64; fi

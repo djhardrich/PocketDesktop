@@ -1,0 +1,113 @@
+#!/bin/bash
+
+# SPDX-License-Identifier: GPL-2.0-or-later
+# Copyright (C) 2023 ROCKNIX External Rootfs Package Installer
+
+# Script to install packages in external rootfs based on distribution type
+# Usage: install_packages <rootfs_path> <distro_type>
+
+set -e
+
+ROOTFS_PATH="$1"
+DISTRO_TYPE="$2"
+
+SCRIPT_DIR="$(dirname "$(realpath "$0")")"
+PROJECT_ROOT="$(dirname "${SCRIPT_DIR}")"
+PACKAGES_CONF="${PROJECT_ROOT}/config/packages.conf"
+
+if [ -z "${ROOTFS_PATH}" ] || [ -z "${DISTRO_TYPE}" ]; then
+    echo "Usage: $0 <rootfs_path> <distro_type>"
+    echo "Example: $0 /tmp/rootfs_contents debian"
+    exit 1
+fi
+
+parse_packages() {
+    local section="$1"
+    awk -v section="[$section]" '
+    BEGIN { in_section = 0 }
+    /^\[.*\]$/ {
+        if ($0 == section) { in_section = 1 } else { in_section = 0 }
+        next
+    }
+    in_section && /^[^#]/ && /=/ {
+        split($0, parts, "=")
+        value = parts[2]
+        gsub(/^[(\"]*|[(\"]*$/, "", value)
+        if (value) print value
+    }
+    ' "${PACKAGES_CONF}"
+}
+
+setup_chroot() {
+    echo "Setting up chroot environment..."
+    mount -t proc proc "${ROOTFS_PATH}/proc" || true
+    mount -t sysfs sysfs "${ROOTFS_PATH}/sys" || true
+    mount -o bind /dev "${ROOTFS_PATH}/dev" || true
+    mount -o bind /dev/pts "${ROOTFS_PATH}/dev/pts" || true
+    mkdir -p "${ROOTFS_PATH}/etc"
+    if [ -f "/etc/resolv.conf" ] && [ -s "/etc/resolv.conf" ]; then
+        cp /etc/resolv.conf "${ROOTFS_PATH}/etc/resolv.conf"
+    else
+        cat > "${ROOTFS_PATH}/etc/resolv.conf" << EOF
+nameserver 8.8.8.8
+nameserver 8.8.4.4
+nameserver 1.1.1.1
+EOF
+    fi
+}
+
+cleanup_chroot() {
+    echo "Cleaning up chroot environment..."
+    for mount_point in "${ROOTFS_PATH}/dev/pts" "${ROOTFS_PATH}/dev" "${ROOTFS_PATH}/sys" "${ROOTFS_PATH}/proc"; do
+        if mountpoint -q "$mount_point" 2>/dev/null; then
+            umount "$mount_point" 2>/dev/null || umount -f "$mount_point" 2>/dev/null || umount -l "$mount_point" 2>/dev/null || true
+        fi
+    done
+}
+
+install_debian_packages() {
+    local packages="$1"
+    [ -z "${packages}" ] && return 0
+    echo "Installing Debian/Ubuntu packages: ${packages}"
+    chroot "${ROOTFS_PATH}" /bin/bash -c "\
+        export DEBIAN_FRONTEND=noninteractive; \
+        export LC_ALL=C; \
+        apt-get update && \
+        apt-get install -y --no-install-recommends ${packages}"
+}
+
+trap cleanup_chroot EXIT
+
+ALL_PACKAGES=""
+while read -r line; do
+    [ -n "$line" ] || continue
+    CONVERTED_PACKAGES=$(echo "$line" | tr ',' ' ')
+    ALL_PACKAGES="${ALL_PACKAGES} ${CONVERTED_PACKAGES}"
+done < <(parse_packages "${DISTRO_TYPE}")
+
+ALL_PACKAGES=$(echo "${ALL_PACKAGES}" | xargs)
+
+if [ -z "${ALL_PACKAGES}" ]; then
+    echo "No packages configured for distribution type: ${DISTRO_TYPE}"
+    echo "Check your ${PACKAGES_CONF} file."
+    exit 0
+fi
+
+echo "Found packages to install: ${ALL_PACKAGES}"
+
+setup_chroot
+
+case "${DISTRO_TYPE}" in
+    debian|ubuntu)
+        install_debian_packages "${ALL_PACKAGES}"
+        ;;
+    *)
+        echo "Error: Unsupported distribution type: ${DISTRO_TYPE}"
+        echo "Supported types: debian, ubuntu, arch, alpine"
+        exit 1
+        ;;
+esac
+
+echo "Package installation completed successfully for ${DISTRO_TYPE}"
+
+

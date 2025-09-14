@@ -1,15 +1,14 @@
--include $(HOME)/.ROCKNIX/options
 
-all: world
+all: kernel bootloader image
 
-system:
-	./scripts/image
+kernel:
+	PROJECT=$(PROJECT) DEVICE=$(DEVICE) ARCH=aarch64 ./scripts/build linux
 
-release:
-	./scripts/image release
+bootloader:
+	PROJECT=$(PROJECT) DEVICE=$(DEVICE) ARCH=aarch64 ./scripts/build u-boot
 
 image:
-	./scripts/image mkimage
+	PROJECT=$(PROJECT) DEVICE=$(DEVICE) ARCH=aarch64 ./scripts/image mkimage
 
 noobs:
 	./scripts/image noobs
@@ -22,9 +21,6 @@ distclean:
 
 src-pkg:
 	tar cvJf sources.tar.xz sources
-
-docs:
-	./tools/foreach './scripts/clean emulators && ./scripts/build emulators'
 
 world: RK3588 RK3566 RK3326 RK3399 S922X SM8250 SM8550 H700
 
@@ -98,7 +94,7 @@ package-clean:
 # For example: make docker-AMD64 will use docker to call: make AMD64
 # All variables are scoped to docker-* commands to prevent weird collisions/behavior with non-docker commands
 
-docker-%: DOCKER_IMAGE := "ghcr.io/rocknix/rocknix-build:latest"
+docker-%: DOCKER_IMAGE := "ghcr.io/pocketdesk/build:latest"
 
 # DOCKER_WORK_DIR is the directory in the Docker image - it is set to /work by default
 #   Anytime this directory changes, you must run `make clean` similarly to moving the distribution directory
@@ -151,6 +147,9 @@ docker-image-build:
 docker-image-pull:
 	$(DOCKER_CMD) pull $(DOCKER_IMAGE)
 
+# Docker targets that need image creation capabilities
+docker-image docker-all: DOCKER_EXTRA_OPTS += --privileged
+
 # Wire up docker to call equivalent make files using % to match and $* to pass the value matched by %
 docker-%:
-	BUILD_DIR=$(DOCKER_WORK_DIR) $(DOCKER_CMD) run $(PODMAN_ARGS) $(INTERACTIVE) --init --env-file .env --rm --user $(UID):$(GID) $(GLOBAL_SETTINGS) $(LOCAL_SSH_KEYS_FILE) $(EMULATIONSTATION_SRC) -v $(PWD):$(DOCKER_WORK_DIR) -w $(DOCKER_WORK_DIR) $(DOCKER_EXTRA_OPTS) $(DOCKER_IMAGE) $(COMMAND)
+	BUILD_DIR=$(DOCKER_WORK_DIR) $(DOCKER_CMD) run $(PODMAN_ARGS) $(INTERACTIVE) --init --env-file .env --rm $(GLOBAL_SETTINGS) $(LOCAL_SSH_KEYS_FILE) $(EMULATIONSTATION_SRC) -v $(PWD):$(DOCKER_WORK_DIR) -w $(DOCKER_WORK_DIR) $(DOCKER_EXTRA_OPTS) $(DOCKER_IMAGE) $(COMMAND)
